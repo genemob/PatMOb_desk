@@ -138,6 +138,8 @@ public class PatmobTable {
                 kd = patent.getKindCode(),
                 pd = patent.getPublicationDate(),
                 tit = "", ass = "", abs = "", imgURL = "";
+        // format pd as date in Excel
+        pd = pd.substring(0,4) + "-" + pd.substring(4,6) + "-" + pd.substring(6);
 
         if (PatBaseAPI.isInitialized) {
             //PatBaseAPI is currently in plugin project so RISKY IMPORT!!!
