@@ -207,6 +207,15 @@ public class DerbyDB implements PatmobDB{
                         pf.setDescription(rs.getString("notes"));               //notes
                         pf.setHilite(rs.getInt("hilite"));
                         collections.add(pf);
+                        break;
+                    case PatentTreeNode.NET_FEATURE:
+                        NetFeature feature = new NetFeature(rs.getString("name"));
+                        feature.setDeep(false);
+                        feature.setID(rs.getInt("id"));
+                        feature.setParentID(rs.getInt("parent_id"));
+                        feature.setDescription(rs.getString("notes"));               //notes
+                        feature.setHilite(rs.getInt("hilite"));
+                        collections.add(feature);
                 }
             }
         } catch (Exception x) {
