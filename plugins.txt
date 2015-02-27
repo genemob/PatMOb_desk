@@ -3,3 +3,4 @@ patmob.plugin.ops.OpsPlugin
 patmob.plugin.alerts.OpsAlertsPlugin2
 patmob.plugin.ops.fc.OpsFcPlugin
 patmob.plugin.patbase.PatBasePost
+patmob.data.ops.OpsRequestTestPlugin

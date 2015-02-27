@@ -41,7 +41,8 @@ public final class OpsRestClient {
                             INPADOC_THROTTLE   = 3,
                             IMAGES_THROTTLE    = 4;
     public static final String 
-            OPS_URL = "https://ops.epo.org/3.1/rest-services/";
+//            OPS_URL = "https://ops.epo.org/3.1/rest-services/";
+            OPS_URL = "https://ops.epo.org/rest-services/";     //20150226 version not needed?
     public static String currentAccessToken = "",
 //20140705
 myKey = "", mySecretKey = "";
