@@ -1,10 +1,14 @@
 package patmob.data.ops.impl;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
@@ -37,15 +41,29 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
             searchURL = "register/search";
     HttpRequestBase[] requests;
     RegisterRequestParams params;
+    ArrayList<String> resultRows;
+    BufferedWriter bw;
 
     public RegisterRequest(RegisterRequestParams searchParams) {
         params = searchParams;
+        resultRows = new ArrayList<>();
         switch (params.getSearchType()) {
             case RegisterRequestParams.BIBLIO_REQUEST:
                 createRetrievalRequests();
+                setupWriter();
                 break;
             case RegisterRequestParams.SEARCH_REQUEST:
                 createSearchRequests();
+        }
+    }
+    
+    private void setupWriter() {
+        String randomFileName = Integer.toString(params.hashCode());
+        File file = new File(randomFileName + ".txt");
+        try {
+            bw = new BufferedWriter(new FileWriter(file));
+        } catch (Exception ex) {
+            System.out.println("RegisterRequest.setupWriter: " + ex);
         }
     }
     
@@ -61,6 +79,12 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
     }
     
     private void createSearchRequests() {
+        
+        //TEMP :)
+        //<ops:register-search total-result-count="3745">
+        //    <ops:query syntax="CQL">pa=sanofi and pn=ep</ops:query>
+        //So let's hard-code 38 requests with the max range of 100 each
+        
         HttpPost httpPost = new HttpPost(OpsRestClient.OPS_URL + searchURL);
         setRequestQuery(httpPost, params.getSearchQuery());
         requests = new HttpRequestBase[]{httpPost};
@@ -93,34 +117,75 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
                     InputStream is = resultEntity.getContent();
                     switch (params.getSearchType()) {
                         case RegisterRequestParams.BIBLIO_REQUEST:
-                            getRegisterData(is);
+//                            handleBiblioResponse(is);
+                            bw.write(getRegisterData(is));
+                            bw.newLine();
+                            bw.flush();
                             break;
                         case RegisterRequestParams.SEARCH_REQUEST:
-                            printStream(is);
+                            getSearchResults(is);
+//                            printStream(is);
                     }
                 } catch (IOException | IllegalStateException ex) {
-                    System.out.println("RegisterRequest: " + ex);
+                    System.out.println("RegisterRequest (Exception): " + ex);
                 }
             }
         } else {
             //response status not OK
-            System.out.println("RegisterRequest: NULL HttpEntity!");
+            System.out.println("RegisterRequest (status): " + response.getStatusLine());
             HttpClientUtils.closeQuietly(response);
         }
     }
     
-    private void printStream(InputStream is) {
-        BufferedReader br = new BufferedReader(new InputStreamReader(is));
-        String line;
-        try {
-            while ((line=br.readLine())!=null) {
-                System.out.println(line);
-            }
-        } catch (IOException ex) {
-            System.out.println("RegisterRequest.printStream: " + ex);
-        }
-    }
+//    private void handleBiblioResponse(InputStream is) {
+//        String resultRow = getRegisterData(is);
+//        resultRows.add(resultRow);
+//        System.out.println(resultRow.substring(0, resultRow.indexOf("\t")));
+        //this is not perfect so for now print as we go
+//        if (params.getPatentNumbers().length == resultRows.size()) {
+//            System.out.println("ALL DONE!!!");
+            //write to a file
+//String randomFileName = Integer.toString(resultRows.hashCode());
+//File file = new File(randomFileName + ".txt");
+//try {
+//    try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+//                    for (String row : resultRows) {
+//                        bw.write(row);
+//                        bw.newLine();
+////                    System.out.println(row);
+//                    }
+//                }
+//            } catch (Exception ex) {
+//                System.out.println("RegisterRequest.handleBiblioResponse: " + ex);
+//            }
+//        }
+//    }
     
+    private String getSearchResults(InputStream is) {
+        String searchRes = "oops",
+                docIdExpression = "//reg:register-document/reg:bibliographic-data"
+                + "/reg:publication-reference/reg:document-id";
+        setupParser(is);
+        InputSource inputSource = getInputSource();
+        try {
+            NodeList docIdNodes = (NodeList) getXPath().evaluate(
+                    docIdExpression, inputSource, XPathConstants.NODESET);
+            for (int i=0; i<docIdNodes.getLength(); i++) {
+                Node docIdNode = docIdNodes.item(i);
+                System.out.println(
+                        getXPath().evaluate("reg:country/text()", docIdNode) +
+                        getXPath().evaluate("reg:doc-number/text()", docIdNode) +
+                                " " +
+                        getXPath().evaluate("reg:date/text()", docIdNode));
+            }
+        } catch (Exception x) {
+            System.out.println("getSearchResults: " + x);
+        }
+        
+        return searchRes;
+    }
+        
+        
     private String getRegisterData(InputStream is) {
         String oppoData = "oops",
                 biblioExpression = "//reg:bibliographic-data";
@@ -131,17 +196,16 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
             biblioElement = (Element) getXPath().evaluate(
                     biblioExpression, inputSource, XPathConstants.NODE);
         } catch (Exception x) {
-            System.out.println("getOppostionData: " + x);
+            System.out.println("getRegisterData: " + x);
         }
         if (biblioElement != null) {
-            String patentStatus = biblioElement.getAttribute("status");
-            String patentNumber = getPatentNumber(biblioElement);
-            String patentTitle = getPatentTitle(biblioElement);
-            String opponentNames = getOpponents(biblioElement);
-            String applicantNames = getApplicants(biblioElement);
-            
-            System.out.println(patentNumber + "\t" + applicantNames + "\t" + patentTitle + "\t" + 
-                    patentStatus + "\t" + opponentNames);
+            StringBuilder sb =                                                  //tab-separated values:
+                    new StringBuilder(getPatentNumber(biblioElement));          //patentNumber
+            sb.append("\t").append(getApplicants(biblioElement))                //applicantNames
+                    .append("\t").append(getPatentTitle(biblioElement))         //patentTitle
+                    .append("\t").append(biblioElement.getAttribute("status"))  //patentStatus
+                    .append("\t").append(getOpponents(biblioElement));          //opponentNames
+            oppoData = sb.toString();
         }
         return oppoData;
     }

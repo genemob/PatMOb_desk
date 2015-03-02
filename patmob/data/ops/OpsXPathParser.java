@@ -1,6 +1,9 @@
 package patmob.data.ops;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Iterator;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.NamespaceContext;
@@ -21,6 +24,20 @@ public abstract class OpsXPathParser {
         xPath.setNamespaceContext(new OPSNamespaceContext());
     }
     
+    //utility method for testing purposes
+    public void printStream(InputStream is) {
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        String line;
+        try {
+            while ((line=br.readLine())!=null) {
+                System.out.println(line);
+            }
+        } catch (IOException ex) {
+            System.out.println("RegisterRequest.printStream: " + ex);
+        }
+    }    
+    
+    //TODO: This should be done in implementations?
     public void setupParser(InputStream is) {
         inputSource = new InputSource(is);
     }
