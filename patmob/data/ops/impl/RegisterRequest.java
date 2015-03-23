@@ -8,6 +8,12 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import org.apache.http.HttpEntity;
@@ -22,6 +28,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import patmob.data.PatentCollectionList;
+import patmob.data.PatentDocument;
 import patmob.data.PatentTreeNode;
 import patmob.data.ops.OpsRestClient;
 import patmob.data.ops.OpsServiceRequest;
@@ -43,6 +50,8 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
     RegisterRequestParams params;
     ArrayList<String> resultRows;
     BufferedWriter bw;
+    int totalSearchResultsCount = 0;
+    boolean notReady = true;
 
     /**
      * Task is determined by the RegisterRequestParams.
@@ -55,7 +64,7 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
     public RegisterRequest(RegisterRequestParams searchParams) {
         params = searchParams;
         resultRows = new ArrayList<>();
-        switch (params.getSearchType()) {
+        switch (params.getRequestType()) {
             case RegisterRequestParams.BIBLIO_REQUEST:
                 createRetrievalRequests();
                 setupWriter();
@@ -107,6 +116,28 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
         OpsRestClient.submitServiceRequest(this, OpsRestClient.OTHER_THROTTLE);
     }
     
+    public RegisterRequestParams submitCall() {
+        this.submit();
+        
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<RegisterRequestParams> future = 
+                executor.submit(new Callable<RegisterRequestParams>() {
+                    @Override
+                    public RegisterRequestParams call() throws Exception {
+                        while (notReady) {
+                            Thread.sleep(100);
+                        }
+                        return params;
+                    }
+                });
+        
+        try {
+            return future.get();
+        } catch (InterruptedException | ExecutionException x) {
+            return null;
+        }
+    }
+    
     @Override
     public HttpRequestBase[] getRequests() {
         return requests;
@@ -119,7 +150,7 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
             if (resultEntity!=null) {
                 try {
                     InputStream is = resultEntity.getContent();
-                    switch (params.getSearchType()) {
+                    switch (params.getRequestType()) {
                         case RegisterRequestParams.BIBLIO_REQUEST:
 //                            handleBiblioResponse(is);
                             //TODO: currently no notification when finished
@@ -176,25 +207,42 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
         String searchRes = "oops",
                 regSearchExpression = "//ops:register-search",
                 rangeExpression = "ops:range";
-        int totalResults, rangeTo;
+        int rangeTo;
         setupParser(is);
         InputSource inputSource = getInputSource();
         try {
             Element regSearchElement = (Element) getXPath().evaluate(
                     regSearchExpression, inputSource, XPathConstants.NODE);
-            totalResults = Integer.parseInt(
-                    regSearchElement.getAttribute("total-result-count"));
             Element rangeElement = (Element) getXPath().evaluate(
                     rangeExpression, regSearchElement, XPathConstants.NODE);
-//            rangeFrom = Integer.parseInt(rangeElement.getAttribute("begin"));
             rangeTo = Integer.parseInt(rangeElement.getAttribute("end"));
+            
             //parse the data and re-submit for another batch, if neccessary 
-            getDocuments(regSearchElement);
-            if (rangeTo<totalResults) {
+            PatentTreeNode resultsBatch = getDocuments(regSearchElement);
+            if (params.getPatents()==null) {
+                // first batch
+                totalSearchResultsCount = Integer.parseInt(
+                        regSearchElement.getAttribute("total-result-count"));
+                resultsBatch.setDescription("Total results: " + 
+                        totalSearchResultsCount);
+                params.setPatents(resultsBatch);
+            } else {
+                // append results
+                Iterator<PatentTreeNode> it = resultsBatch.getChildren().iterator();
+                while (it.hasNext()) {
+                    params.getPatents().addChild(it.next());
+                }
+            }
+            
+//            System.out.println("total-result-count: " + totalSearchResultsCount);
+            if (params.getResultType()==RegisterRequestParams.ALL_RESULT && 
+                    rangeTo<totalSearchResultsCount) {
                 int newFrom = rangeTo + 1;
                 int newTo = newFrom + 99;
                 createSearchRequests(newFrom, newTo);
                 submit();
+            } else {
+                notReady = false;
             }
         } catch (XPathExpressionException | NumberFormatException x) {
             System.out.println("getSearchResults: " + x);
@@ -211,17 +259,21 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
     private PatentTreeNode getDocuments(Element regSearchElement) {
         String docIdExpression = "//reg:register-document/reg:bibliographic-data"
                 + "/reg:publication-reference/reg:document-id";
-        PatentCollectionList documents = null;
+        PatentCollectionList documents = new PatentCollectionList("reg search");
         try {
             NodeList docIdNodes = (NodeList) getXPath().evaluate(
                     docIdExpression, regSearchElement, XPathConstants.NODESET);
             for (int i=0; i<docIdNodes.getLength(); i++) {
                 Node docIdNode = docIdNodes.item(i);
-                System.out.println(
+                PatentDocument doc = new PatentDocument(
                         getXPath().evaluate("reg:country/text()", docIdNode) +
-                        getXPath().evaluate("reg:doc-number/text()", docIdNode) +
-                                " " +
-                        getXPath().evaluate("reg:date/text()", docIdNode));
+                        getXPath().evaluate("reg:doc-number/text()", docIdNode));
+                documents.addChild(doc);
+//                System.out.println(
+//                        getXPath().evaluate("reg:country/text()", docIdNode) +
+//                        getXPath().evaluate("reg:doc-number/text()", docIdNode) +
+//                                " " +
+//                        getXPath().evaluate("reg:date/text()", docIdNode));
             }
         } catch (Exception x) {
             System.out.println("RegisterRequest.getDocuments: " + x);
