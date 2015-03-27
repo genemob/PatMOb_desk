@@ -8,7 +8,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import patmob.core.PatmobPlugin;
 import patmob.data.ops.impl.RegisterRequest;
-import patmob.data.ops.impl.RegisterRequestParams;
+import patmob.data.ops.impl.register.RegisterRequestParams;
 
 /**
  *  ***DELETE***

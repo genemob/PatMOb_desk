@@ -1,5 +1,6 @@
 package patmob.data.ops.impl;
 
+import patmob.data.ops.impl.register.RegisterRequestParams;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -120,16 +121,16 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
         this.submit();
         
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<RegisterRequestParams> future = 
-                executor.submit(new Callable<RegisterRequestParams>() {
-                    @Override
-                    public RegisterRequestParams call() throws Exception {
-                        while (notReady) {
-                            Thread.sleep(100);
-                        }
-                        return params;
-                    }
-                });
+        Future<RegisterRequestParams> future;
+        future = executor.submit(new Callable<RegisterRequestParams>() {
+            @Override
+            public RegisterRequestParams call() throws Exception {
+                while (notReady) {
+                    Thread.sleep(100);
+                }
+                return params;
+            }
+        });
         
         try {
             return future.get();
@@ -159,7 +160,7 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
                             bw.flush();
                             break;
                         case RegisterRequestParams.SEARCH_REQUEST:
-                            getSearchResults(is);
+                            parseSearchResults(is);
 //                            printStream(is);
                     }
                 } catch (IOException | IllegalStateException ex) {
@@ -199,13 +200,13 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
 //    }
     
     /**
-     * Parse Register search results.
+     * Parse Register search results and 
+     * store patent numbers in RegisterRequestParams.
      * @param is - InputStream from HttpResponse
      * @return 
      */
-    private String getSearchResults(InputStream is) {
-        String searchRes = "oops",
-                regSearchExpression = "//ops:register-search",
+    private void parseSearchResults(InputStream is) {
+        String regSearchExpression = "//ops:register-search",
                 rangeExpression = "ops:range";
         int rangeTo;
         setupParser(is);
@@ -217,7 +218,7 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
                     rangeExpression, regSearchElement, XPathConstants.NODE);
             rangeTo = Integer.parseInt(rangeElement.getAttribute("end"));
             
-            //parse the data and re-submit for another batch, if neccessary 
+            //parse the data and put patent numbers in RegisterRequestParams
             PatentTreeNode resultsBatch = getDocuments(regSearchElement);
             if (params.getPatents()==null) {
                 // first batch
@@ -234,7 +235,7 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
                 }
             }
             
-//            System.out.println("total-result-count: " + totalSearchResultsCount);
+            // re-submit for another batch, if neccessary - or ready to return
             if (params.getResultType()==RegisterRequestParams.ALL_RESULT && 
                     rangeTo<totalSearchResultsCount) {
                 int newFrom = rangeTo + 1;
@@ -247,12 +248,10 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
         } catch (XPathExpressionException | NumberFormatException x) {
             System.out.println("getSearchResults: " + x);
         }
-        
-        return searchRes;
     }
     
     /**
-     * Called from getSearchResults to process the data.
+     * Called from parseSearchResults to process the data.
      * @param regSearchElement
      * @return 
      */
@@ -269,11 +268,6 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
                         getXPath().evaluate("reg:country/text()", docIdNode) +
                         getXPath().evaluate("reg:doc-number/text()", docIdNode));
                 documents.addChild(doc);
-//                System.out.println(
-//                        getXPath().evaluate("reg:country/text()", docIdNode) +
-//                        getXPath().evaluate("reg:doc-number/text()", docIdNode) +
-//                                " " +
-//                        getXPath().evaluate("reg:date/text()", docIdNode));
             }
         } catch (Exception x) {
             System.out.println("RegisterRequest.getDocuments: " + x);
