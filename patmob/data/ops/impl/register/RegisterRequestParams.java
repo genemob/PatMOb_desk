@@ -1,5 +1,6 @@
 package patmob.data.ops.impl.register;
 
+import java.util.ArrayList;
 import patmob.data.PatentTreeNode;
 
 /**
@@ -20,6 +21,7 @@ public class RegisterRequestParams {
     private String query = "";
     private String[] pns = new String[0];
     private PatentTreeNode patents = null;
+    private ArrayList<String> resultRows;
     
     /**
      * Params for biblio request. 
@@ -29,6 +31,7 @@ public class RegisterRequestParams {
     public RegisterRequestParams(String[] patentNumbers) {
         registerRequestType = BIBLIO_REQUEST;
         pns = patentNumbers;
+        resultRows = new ArrayList<>();
      }
     
     /**
@@ -77,5 +80,17 @@ public class RegisterRequestParams {
     
     public PatentTreeNode getPatents() {
         return patents;
+    }
+    
+    public void setResultRows(ArrayList<String> rr) {
+        resultRows = rr;
+    }
+    
+    public void addResultRow(String rr) {
+        resultRows.add(rr);
+    }
+    
+    public ArrayList<String> getResultRows() {
+        return resultRows;
     }
 }

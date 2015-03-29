@@ -49,9 +49,9 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
             searchURL = "register/search";
     HttpRequestBase[] requests;
     RegisterRequestParams params;
-    ArrayList<String> resultRows;
+//    ArrayList<String> resultRows;
     BufferedWriter bw;
-    int totalSearchResultsCount = 0;
+    int totalSearchResultsCount = 0, responseCount = 0;
     boolean notReady = true;
 
     /**
@@ -64,26 +64,26 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
      */
     public RegisterRequest(RegisterRequestParams searchParams) {
         params = searchParams;
-        resultRows = new ArrayList<>();
         switch (params.getRequestType()) {
             case RegisterRequestParams.BIBLIO_REQUEST:
                 createRetrievalRequests();
-                setupWriter();
+//                resultRows = new ArrayList<>();
+//                setupWriter();
                 break;
             case RegisterRequestParams.SEARCH_REQUEST:
                 createSearchRequests(1, 25);
         }
     }
     
-    private void setupWriter() {
-        String randomFileName = Integer.toString(params.hashCode());
-        File file = new File(randomFileName + ".txt");
-        try {
-            bw = new BufferedWriter(new FileWriter(file));
-        } catch (Exception ex) {
-            System.out.println("RegisterRequest.setupWriter: " + ex);
-        }
-    }
+//    private void setupWriter() {
+//        String randomFileName = Integer.toString(params.hashCode());
+//        File file = new File(randomFileName + ".txt");
+//        try {
+//            bw = new BufferedWriter(new FileWriter(file));
+//        } catch (Exception ex) {
+//            System.out.println("RegisterRequest.setupWriter: " + ex);
+//        }
+//    }
     
     private void createRetrievalRequests() {
         String[] patentNumbers = params.getPatentNumbers();
@@ -146,6 +146,7 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
 
     @Override
     public void handleResponse(HttpResponse response) {
+        responseCount++;    //used to track biblio request
         if (response.getStatusLine().getStatusCode()==200) {
             HttpEntity resultEntity = response.getEntity();
             if (resultEntity!=null) {
@@ -153,11 +154,12 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
                     InputStream is = resultEntity.getContent();
                     switch (params.getRequestType()) {
                         case RegisterRequestParams.BIBLIO_REQUEST:
+                            parseBiblioResults(is);
 //                            handleBiblioResponse(is);
                             //TODO: currently no notification when finished
-                            bw.write(getRegisterData(is));
-                            bw.newLine();
-                            bw.flush();
+//                            bw.write(getRegisterData(is));
+//                            bw.newLine();
+//                            bw.flush();
                             break;
                         case RegisterRequestParams.SEARCH_REQUEST:
                             parseSearchResults(is);
@@ -198,6 +200,19 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
 //            }
 //        }
 //    }
+    
+    private void parseBiblioResults(InputStream is) {
+        String resultRow = getRegisterData(is);
+        params.addResultRow(resultRow);
+//        resultRows.add(resultRow);
+        if (responseCount==requests.length) {
+            // All responses we will get
+            notReady = false;
+            System.out.println("parseBiblioResults RETURNED " +
+                    params.getResultRows().size() + " results for " +
+                    requests.length + " requests.");
+        }
+    }
     
     /**
      * Parse Register search results and 
