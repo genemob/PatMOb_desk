@@ -2,12 +2,9 @@ package patmob.data.ops.impl;
 
 import patmob.data.ops.impl.register.RegisterRequestParams;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
@@ -37,6 +34,10 @@ import patmob.data.ops.OpsXPathParser;
 
 /**
  * Sends requests to EPO Register Service and handles responses.
+ * New architecture for the OpsServiceRequest implementation: submitCall
+ * method returns results when all requests return responses. Since
+ * responseCount is incremented at the end of handleResponse, the request number
+ * can be adjusted based on the initial response, as in parseSearchResults.
  * @author Piotr
  */
 public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest {
@@ -49,10 +50,8 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
             searchURL = "register/search";
     HttpRequestBase[] requests;
     RegisterRequestParams params;
-//    ArrayList<String> resultRows;
     BufferedWriter bw;
     int totalSearchResultsCount = 0, responseCount = 0;
-    boolean notReady = true;
 
     /**
      * Task is determined by the RegisterRequestParams.
@@ -67,23 +66,11 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
         switch (params.getRequestType()) {
             case RegisterRequestParams.BIBLIO_REQUEST:
                 createRetrievalRequests();
-//                resultRows = new ArrayList<>();
-//                setupWriter();
                 break;
             case RegisterRequestParams.SEARCH_REQUEST:
-                createSearchRequests(1, 25);
+                requests = new HttpRequestBase[]{getSearchRequest(1, 25)};
         }
     }
-    
-//    private void setupWriter() {
-//        String randomFileName = Integer.toString(params.hashCode());
-//        File file = new File(randomFileName + ".txt");
-//        try {
-//            bw = new BufferedWriter(new FileWriter(file));
-//        } catch (Exception ex) {
-//            System.out.println("RegisterRequest.setupWriter: " + ex);
-//        }
-//    }
     
     private void createRetrievalRequests() {
         String[] patentNumbers = params.getPatentNumbers();
@@ -96,12 +83,12 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
         }
     }
     
-    private void createSearchRequests(int rangeFrom, int rangeTo) {
+    private HttpPost getSearchRequest(int rangeFrom, int rangeTo) {
         HttpPost httpPost = new HttpPost(OpsRestClient.OPS_URL + searchURL);
         httpPost.setHeader("X-OPS-Range", Integer.toString(rangeFrom) +
                 "-" + Integer.toString(rangeTo));
         setRequestQuery(httpPost, params.getSearchQuery());
-        requests = new HttpRequestBase[]{httpPost};
+        return httpPost;
     }
     
     private void setRequestQuery(HttpPost httpPost, String query) {
@@ -125,7 +112,7 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
         future = executor.submit(new Callable<RegisterRequestParams>() {
             @Override
             public RegisterRequestParams call() throws Exception {
-                while (notReady) {
+                while (responseCount<requests.length) {
                     Thread.sleep(100);
                 }
                 return params;
@@ -146,7 +133,6 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
 
     @Override
     public void handleResponse(HttpResponse response) {
-        responseCount++;    //used to track biblio request
         if (response.getStatusLine().getStatusCode()==200) {
             HttpEntity resultEntity = response.getEntity();
             if (resultEntity!=null) {
@@ -155,15 +141,9 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
                     switch (params.getRequestType()) {
                         case RegisterRequestParams.BIBLIO_REQUEST:
                             parseBiblioResults(is);
-//                            handleBiblioResponse(is);
-                            //TODO: currently no notification when finished
-//                            bw.write(getRegisterData(is));
-//                            bw.newLine();
-//                            bw.flush();
                             break;
                         case RegisterRequestParams.SEARCH_REQUEST:
                             parseSearchResults(is);
-//                            printStream(is);
                     }
                 } catch (IOException | IllegalStateException ex) {
                     System.out.println("RegisterRequest (Exception): " + ex);
@@ -174,44 +154,11 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
             System.out.println("RegisterRequest (status): " + response.getStatusLine());
             HttpClientUtils.closeQuietly(response);
         }
+        responseCount++;    //used to track biblio request
     }
     
-    //this did not print "ALL DONE!!!" for a large query
-//    private void handleBiblioResponse(InputStream is) {
-//        String resultRow = getRegisterData(is);
-//        resultRows.add(resultRow);
-//        System.out.println(resultRow.substring(0, resultRow.indexOf("\t")));
-        //this is not perfect so for now print as we go
-//        if (params.getPatentNumbers().length == resultRows.size()) {
-//            System.out.println("ALL DONE!!!");
-            //write to a file
-//String randomFileName = Integer.toString(resultRows.hashCode());
-//File file = new File(randomFileName + ".txt");
-//try {
-//    try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
-//                    for (String row : resultRows) {
-//                        bw.write(row);
-//                        bw.newLine();
-////                    System.out.println(row);
-//                    }
-//                }
-//            } catch (Exception ex) {
-//                System.out.println("RegisterRequest.handleBiblioResponse: " + ex);
-//            }
-//        }
-//    }
-    
     private void parseBiblioResults(InputStream is) {
-        String resultRow = getRegisterData(is);
-        params.addResultRow(resultRow);
-//        resultRows.add(resultRow);
-        if (responseCount==requests.length) {
-            // All responses we will get
-            notReady = false;
-            System.out.println("parseBiblioResults RETURNED " +
-                    params.getResultRows().size() + " results for " +
-                    requests.length + " requests.");
-        }
+        params.addResultRow(getRegisterData(is));
     }
     
     /**
@@ -242,23 +189,30 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
                 resultsBatch.setDescription("Total results: " + 
                         totalSearchResultsCount);
                 params.setPatents(resultsBatch);
+                
+                //create & submit all neccessary requests HERE
+                if (params.getResultType()==RegisterRequestParams.ALL_RESULT
+                        && rangeTo<totalSearchResultsCount) {
+                    responseCount = -1;                          //reset counter
+                    int requestsNumber = (totalSearchResultsCount-rangeTo)/100;
+                    if ((totalSearchResultsCount-rangeTo)%100>0) requestsNumber++;
+                    
+                    // if more than 2000 - retrieve 2000
+                    
+                    requests = new HttpRequestBase[requestsNumber];
+                    for (int i=0; i<requests.length; i++) {
+                        int rangeFrom = rangeTo + 1;
+                        rangeTo = rangeFrom + 99;
+                        requests[i] = getSearchRequest(rangeFrom, rangeTo);
+                    }
+                    submit();
+                }
             } else {
                 // append results
                 Iterator<PatentTreeNode> it = resultsBatch.getChildren().iterator();
                 while (it.hasNext()) {
                     params.getPatents().addChild(it.next());
                 }
-            }
-            
-            // re-submit for another batch, if neccessary - or ready to return
-            if (params.getResultType()==RegisterRequestParams.ALL_RESULT && 
-                    rangeTo<totalSearchResultsCount) {
-                int newFrom = rangeTo + 1;
-                int newTo = newFrom + 99;
-                createSearchRequests(newFrom, newTo);
-                submit();
-            } else {
-                notReady = false;
             }
         } catch (XPathExpressionException | NumberFormatException x) {
             System.out.println("getSearchResults: " + x);
@@ -289,7 +243,6 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
         }
         return documents;
     }
-        
         
     private String getRegisterData(InputStream is) {
         String oppoData = "oops",
