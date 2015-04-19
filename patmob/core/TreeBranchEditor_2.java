@@ -10,6 +10,8 @@ import patmob.data.PatmobTree;
 import patmob.data.ops.impl.EquivalentsRequest;
 import patmob.data.ops.impl.InpadocFamilyRequest;
 import patmob.data.ops.impl.LegalRequest;
+import patmob.data.table.PatmobTableModel;
+import patmob.data.table.TestTable;
 import patmob.util.PatmobDesktop;
 import patmob.util.PatmobTable;
 
@@ -365,7 +367,13 @@ implements TreeNodeInfoDisplayer {
     }//GEN-LAST:event_writeToJsonMenuItemActionPerformed
 
     private void convertToTableMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_convertToTableMenuItemActionPerformed
-        PatmobTable.printAlertTable(rootNode);
+//        PatmobTable.printAlertTable(rootNode);
+//        new PatmobTableModel(rootNode);
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new TestTable(rootNode).setVisible(true);
+            }
+        });
     }//GEN-LAST:event_convertToTableMenuItemActionPerformed
     //</editor-fold>
     
