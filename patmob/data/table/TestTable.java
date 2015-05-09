@@ -5,6 +5,8 @@
  */
 package patmob.data.table;
 
+import java.awt.Color;
+import javax.swing.table.DefaultTableCellRenderer;
 import patmob.data.PatentTreeNode;
 
 /**
@@ -16,6 +18,7 @@ public class TestTable extends javax.swing.JFrame {
     
     /**
      * Creates new form TestTable
+     * @param node
      */
 //    public TestTable() {
 //        initComponents();
@@ -24,6 +27,28 @@ public class TestTable extends javax.swing.JFrame {
     public TestTable(PatentTreeNode node) {
         myModel = new PatmobTableModel(node);
         initComponents();
+        
+        setTitle("PatMOb Table: " + node.toString());
+        jTable1.getColumn("Select").setMaxWidth(45);
+        jTable1.getColumn("Select").setResizable(false);
+        
+        DefaultTableCellRenderer dtcr = (DefaultTableCellRenderer) 
+                //javax.swing.JTable$BooleanRenderer cannot be cast
+                //jTable1.getCellRenderer(0, 0);
+                jTable1.getCellRenderer(1, 1);
+
+        dtcr.setBackground(Color.lightGray);
+//        myModel.setValueAt("tit1", 0, 4);
+//        myModel.setValueAt("ass1", 0, 5);
+//        myModel.setValueAt("tit2", 1, 4);
+//        myModel.setValueAt("ass2", 1, 5);
+    }
+    
+    static class ColorRenderer extends DefaultTableCellRenderer {
+        @Override
+        public void setBackground(Color c) {
+            
+        }
     }
 
     /**
@@ -39,6 +64,7 @@ public class TestTable extends javax.swing.JFrame {
         jTable1 = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setPreferredSize(new java.awt.Dimension(800, 300));
 
         jTable1.setFont(new java.awt.Font("Tahoma", 0, 10)); // NOI18N
         jTable1.setModel(myModel);
@@ -50,7 +76,7 @@ public class TestTable extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 380, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 780, Short.MAX_VALUE)
                 .addContainerGap())
         );
         layout.setVerticalGroup(
