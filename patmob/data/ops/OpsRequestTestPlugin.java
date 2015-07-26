@@ -7,8 +7,10 @@ import java.util.ArrayList;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import patmob.core.PatmobPlugin;
+import static patmob.core.PatmobPlugin.coreAccess;
 import patmob.data.ops.impl.RegisterRequest;
 import patmob.data.ops.impl.register.RegisterRequestParams;
+import patmob.patbase.MethodDemo;
 
 /**
  *  ***DELETE***
@@ -18,12 +20,24 @@ public class OpsRequestTestPlugin implements PatmobPlugin {
 
     @Override
     public String getName() {
-        return "OPS Request Test Plugin";
+//        return "OPS Request Test Plugin";
+        
+        return "PatBase REST API Methods Demo";
     }
 
     @Override
     public void doJob() {
-        JOptionPane.showMessageDialog(null, "Plug-in used for testing.");
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new MethodDemo(coreAccess.getController()
+                        .getPatmobProperty("patmobProxy")).setVisible(true);
+            }
+        });
+        
+        
+//        JOptionPane.showMessageDialog(null, "Plug-in used for testing.");
+        
         //TODO: need GUI to determine search/biblio request
 //        submitBiblioRequest();
 //        submitSearchRequest();

@@ -83,6 +83,7 @@ implements TreeNodeInfoDisplayer {
         jMenu2 = new javax.swing.JMenu();
         freeMindMenuItem = new javax.swing.JMenuItem();
         convertToTableMenuItem = new javax.swing.JMenuItem();
+        jMenuItem1 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
@@ -231,6 +232,14 @@ implements TreeNodeInfoDisplayer {
         });
         jMenu2.add(convertToTableMenuItem);
 
+        jMenuItem1.setText("Table Test");
+        jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem1ActionPerformed(evt);
+            }
+        });
+        jMenu2.add(jMenuItem1);
+
         jMenuBar1.add(jMenu2);
 
         setJMenuBar(jMenuBar1);
@@ -367,14 +376,18 @@ implements TreeNodeInfoDisplayer {
     }//GEN-LAST:event_writeToJsonMenuItemActionPerformed
 
     private void convertToTableMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_convertToTableMenuItemActionPerformed
-//        PatmobTable.printAlertTable(rootNode);
+        PatmobTable.printAlertTable(rootNode);
 //        new PatmobTableModel(rootNode);
+
+    }//GEN-LAST:event_convertToTableMenuItemActionPerformed
+
+    private void jMenuItem1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem1ActionPerformed
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new TestTable(rootNode).setVisible(true);
             }
         });
-    }//GEN-LAST:event_convertToTableMenuItemActionPerformed
+    }//GEN-LAST:event_jMenuItem1ActionPerformed
     //</editor-fold>
     
 
@@ -391,6 +404,7 @@ implements TreeNodeInfoDisplayer {
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JScrollPane jScrollPane1;
