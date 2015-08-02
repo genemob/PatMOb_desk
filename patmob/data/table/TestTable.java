@@ -7,6 +7,7 @@ package patmob.data.table;
 
 import java.awt.Color;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableModel;
 import patmob.data.PatentTreeNode;
 
 /**
@@ -14,15 +15,18 @@ import patmob.data.PatentTreeNode;
  * @author Piotr
  */
 public class TestTable extends javax.swing.JFrame {
-    PatmobTableModel myModel = null;
+//    PatmobTableModel myModel = null;
+    TableModel myModel = null;
     
     /**
      * Creates new form TestTable
      * @param node
      */
-//    public TestTable() {
-//        initComponents();
-//    }
+    public TestTable(TableModel model) {
+        myModel = model;
+        initComponents();
+        jTable1.setAutoCreateRowSorter(true);
+    }
     
     public TestTable(PatentTreeNode node) {
         myModel = new PatmobTableModel(node);
