@@ -51,7 +51,7 @@ public class RegisterRequest extends OpsXPathParser implements OpsServiceRequest
     HttpRequestBase[] requests;
     RegisterRequestParams params;
     BufferedWriter bw;
-    int totalSearchResultsCount = 0, responseCount = 0;
+    public int totalSearchResultsCount = 0, responseCount = 0;
 
     /**
      * Task is determined by the RegisterRequestParams.
