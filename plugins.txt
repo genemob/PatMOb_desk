@@ -6,3 +6,4 @@ patmob.plugin.patbase.PatBasePost
 patmob.data.ops.OpsRequestTestPlugin
 patmob.plugin.ops.register.EPRegisterPlugin
 patmob.patbase.PatbaseRestPlugin
+patmob.patbase.table.LoadTablePlugin
