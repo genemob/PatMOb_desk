@@ -1,6 +1,5 @@
 package patmob.core;
 
-import javax.swing.JOptionPane;
 import javax.swing.tree.DefaultMutableTreeNode;
 import patmob.convert.FreeMind;
 import patmob.convert.PatmobXML;
@@ -10,10 +9,8 @@ import patmob.data.PatmobTree;
 import patmob.data.ops.impl.EquivalentsRequest;
 import patmob.data.ops.impl.InpadocFamilyRequest;
 import patmob.data.ops.impl.LegalRequest;
-import patmob.data.table.PatmobTableModel;
 import patmob.data.table.TestTable;
 import patmob.util.PatmobDesktop;
-import patmob.util.PatmobTable;
 
 /**
  *
@@ -82,7 +79,6 @@ implements TreeNodeInfoDisplayer {
         writeToJsonMenuItem = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
         freeMindMenuItem = new javax.swing.JMenuItem();
-        convertToTableMenuItem = new javax.swing.JMenuItem();
         jMenuItem1 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
@@ -223,14 +219,6 @@ implements TreeNodeInfoDisplayer {
             }
         });
         jMenu2.add(freeMindMenuItem);
-
-        convertToTableMenuItem.setText("Convert to a Table...");
-        convertToTableMenuItem.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                convertToTableMenuItemActionPerformed(evt);
-            }
-        });
-        jMenu2.add(convertToTableMenuItem);
 
         jMenuItem1.setText("Table Test");
         jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
@@ -375,12 +363,6 @@ implements TreeNodeInfoDisplayer {
         PatmobDesktop.saveNodeToJSONFile(rootNode);
     }//GEN-LAST:event_writeToJsonMenuItemActionPerformed
 
-    private void convertToTableMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_convertToTableMenuItemActionPerformed
-        PatmobTable.printAlertTable(rootNode);
-//        new PatmobTableModel(rootNode);
-
-    }//GEN-LAST:event_convertToTableMenuItemActionPerformed
-
     private void jMenuItem1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem1ActionPerformed
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -396,7 +378,6 @@ implements TreeNodeInfoDisplayer {
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
-    private javax.swing.JMenuItem convertToTableMenuItem;
     private javax.swing.JRadioButton equivalentsButton;
     private javax.swing.JRadioButton familyButton;
     private javax.swing.JMenuItem freeMindMenuItem;

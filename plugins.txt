@@ -2,8 +2,8 @@ patmob.data.inpadoc.InpadocTestPlugin
 patmob.plugin.ops.OpsPlugin
 patmob.plugin.alerts.OpsAlertsPlugin2
 patmob.plugin.ops.fc.OpsFcPlugin
-patmob.plugin.patbase.PatBasePost
 patmob.data.ops.OpsRequestTestPlugin
 patmob.plugin.ops.register.EPRegisterPlugin
 patmob.patbase.PatbaseRestPlugin
+patmob.patbase.MethodDemoPlugin
 patmob.patbase.table.LoadTablePlugin
