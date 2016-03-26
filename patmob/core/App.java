@@ -20,6 +20,18 @@ class App extends SingleFrameApplication {
      */
     @Override 
     protected void startup() {
+        
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            System.out.println("STARTUP NIMBUS: " + ex);
+        }        
+        
         patmobView = new PatmobView(this);
         show(patmobView);
         patmobController = new Controller(patmobView);
